@@ -6,7 +6,6 @@ const Schema = mongoose.Schema;
 mongoose.plugin(slug)
 
 const Device = new Schema({
-  sensorId: {type: String },
   id: {type: String},
   name: {type: String},
   action: {type: Boolean, default: false }
