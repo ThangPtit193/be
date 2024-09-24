@@ -1,12 +1,47 @@
 const device = require('../models/device')
 
-const updateDeviceService = (id, data) => (new Promise(async(resolve,reject)=> {
+const createDataService = () => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const numDoc = await device.countDocuments();
+      if (numDoc > 0) {
+        return resolve({ success: true, message: 'Đã tồn tại dữ liệu' });
+      }
+
+      const devices = [
+        { name: 'Fan' },
+        { name: 'TV' },
+        { name: 'Bulb' },
+      ];
+
+      const responses = await Promise.all(
+        devices.map(deviceData => device.create(deviceData))
+      );
+
+      resolve({
+        success: true,
+        data: responses, // Trả về mảng các document đã tạo
+      });
+    } catch (error) {
+      reject({
+        success: false,
+        error: error.message, // Trả về thông báo lỗi
+      });
+    }
+  });
+};
+
+
+
+
+
+const updateDataService = (body,id) => (new Promise(async(resolve,reject)=> {
   try {
-      const response = await device.findByIdAndUpdate({_id : id},data,{new: true}  
+      const {action} = body
+      const response = await device.findByIdAndUpdate({_id : id},{action},{new: true}  
     )
       resolve({
           err: response ? 0 : 1,
-          mess: response ? 'Lấy nhiệt độ,độ ẩm thành công' : 'lấy nhiệt độ, độ ẩm thất bại',
           data: response ? response : null
       })
   } catch (error) {
@@ -14,4 +49,15 @@ const updateDeviceService = (id, data) => (new Promise(async(resolve,reject)=> {
   }
 }))
 
-module.exports = {updateDeviceService};
+const getDataService = () => (new Promise(async(resolve,reject)=> {
+  try {
+      const response = await device.find() 
+      resolve({
+          err: response ? 0 : 1,
+          data: response ? response : null
+      })
+  } catch (error) {
+      reject(error)
+  }
+}))
+module.exports = {updateDataService,createDataService,getDataService};
