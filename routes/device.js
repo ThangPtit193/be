@@ -1,9 +1,8 @@
 const express = require('express')
 const router = express.Router()
-const { updateData, getData, getDataByCondition } = require('../controllers/device')
+const { updateData, getData, getDeviceByTime } = require('../controllers/device')
 
 router.put('/update-device/:id', updateData)
 router.get('/get-device', getData)
-router.get('/table-data', getDataByCondition)
-
+router.get('/get-device/table_device', getDeviceByTime)
 module.exports = router

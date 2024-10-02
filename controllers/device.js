@@ -1,5 +1,6 @@
 const dataSensor = require('../models/dataSensor')
-const { updateDataService, createDataService, getDataService } = require('../services/device')
+const historyAction = require('../models/historyAction')
+const { updateDataService, createDataService, getDataService, getDeviceByTimeService } = require('../services/device')
 
 
 // const createData = async(req, res) => {
@@ -45,30 +46,24 @@ const getData = async (req, res) => {
   }
 }
 
-const getDataByCondition = async (req, res) => {
+const getDeviceByTime = async (req, res) => {
   try {
-    const { content, searchBy, orderBy, sortBy, page, pageSize } = req.query;
+    const { startTime, endTime, page, pageSize } = req.query;
 
-    let query = {};
-    if (content && searchBy) {
-      query[searchBy] = Number(content) // Tìm kiếm theo chuỗi có chứa content
+    let condition = {}
+    if (startTime && endTime) {
+      const startDate = new Date(startTime);
+      const endDate = new Date(endTime);
+      condition.createdAt = { $gte: startDate, $lte: endDate }
     }
 
-    const sortOptions = {};
-    if (orderBy && sortBy) {
-      sortOptions[orderBy] = sortBy.toLowerCase() === 'asc' ? 1 : -1; // Sắp xếp tăng dần hoặc giảm dần
-    }
+    const limit = parseInt(pageSize) || 10; // Số bản ghi trên mỗi trang
+    const skip = (parseInt(page) - 1) * limit || 0; // Số bản ghi bỏ qua
 
-    const limit = parseInt(pageSize) || 10; // Số lượng bản ghi trên mỗi trang
-    const skip = (parseInt(page) - 1) * limit || 0; // Bỏ qua số bản ghi cho việc phân trang
+    // Truy vấn dữ liệu với createdAt nằm trong khoảng startDate và endDate
+    const histories = await historyAction.find(condition).skip(skip).limit(limit);
 
-    // Thực hiện query
-    const data = await dataSensor.find(query)
-      .sort(sortOptions) // Sắp xếp
-      .skip(skip) // Bỏ qua số bản ghi
-      .limit(limit); // Giới hạn số bản ghi
-
-    return res.status(200).json(data)
+    return res.status(200).json({ data: histories })
   } catch (error) {
     return res.status(400).json({
       err: 1,
@@ -76,7 +71,9 @@ const getDataByCondition = async (req, res) => {
     })
   }
 }
-module.exports = { updateData, getData, getDataByCondition }
+
+
+module.exports = { updateData, getData, getDeviceByTime }
 
 
 

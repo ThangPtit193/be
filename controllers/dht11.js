@@ -1,4 +1,4 @@
-const { getData, createDataService } = require('../services/dht11')
+const { getData, createDataService, getDataByCondition } = require('../services/dht11')
 
 const getAllData = async (req, res) => {
   try {
@@ -33,5 +33,23 @@ const createData = async (req, res) => {
 }
 
 
-module.exports = { getAllData, createData }
+const getDataByType = async (req, res) => {
+  try {
+    const { content, searchBy, orderBy, sortBy, page, pageSize } = req.query;
+
+    // Gọi hàm từ service
+    const data = await getDataByCondition({
+      content, searchBy, orderBy, sortBy, page, pageSize
+    });
+
+    return res.status(200).json(data); // Trả về dữ liệu nếu thành công
+  } catch (error) {
+    return res.status(400).json({
+      err: 1,
+      mess: error.message // Trả về lỗi nếu có
+    });
+  }
+};
+
+module.exports = { getAllData, createData, getDataByType }
 
