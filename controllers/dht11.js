@@ -36,6 +36,7 @@ const createData = async (req, res) => {
 const getDataByType = async (req, res) => {
   try {
     const { content, searchBy, orderBy, sortBy, page, pageSize } = req.query;
+    console.log('Received parameters:', { content, searchBy, orderBy, sortBy, page, pageSize }); // Log tham số nhận được
 
     // Gọi hàm từ service
     const data = await getDataByCondition({

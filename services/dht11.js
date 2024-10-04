@@ -74,4 +74,9 @@ const getDataByCondition = async ({ content, searchBy, orderBy, sortBy, page, pa
   }
 };
 
+
+
+
+
+
 module.exports = { getData, createDataService, getDataByCondition };
