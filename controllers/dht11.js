@@ -33,24 +33,37 @@ const createData = async (req, res) => {
 }
 
 
-const getDataByType = async (req, res) => {
-  try {
-    const { content, searchBy, orderBy, sortBy, page, pageSize } = req.query;
-    console.log('Received parameters:', { content, searchBy, orderBy, sortBy, page, pageSize }); // Log tham số nhận được
 
-    // Gọi hàm từ service
-    const data = await getDataByCondition({
-      content, searchBy, orderBy, sortBy, page, pageSize
+const getDataWithCondition = async (req, res) => {
+  try {
+    // Lấy các tham số từ query string
+    const { content, searchBy, orderBy, sortBy, page, pageSize } = req.query;
+
+    // Gọi service để lấy dữ liệu với các điều kiện
+    const dataSensor = await getDataByCondition({
+      content,
+      searchBy,
+      orderBy,
+      sortBy,
+      page,
+      pageSize,
     });
 
-    return res.status(200).json(data); // Trả về dữ liệu nếu thành công
+    // Trả về kết quả thành công với dữ liệu
+    return res.status(200).json({
+      success: true,
+      message: 'Data retrieved successfully',
+      data: dataSensor.data,
+    });
   } catch (error) {
-    return res.status(400).json({
-      err: 1,
-      mess: error.message // Trả về lỗi nếu có
+    // Xử lý lỗi nếu service ném ra lỗi
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve data',
+      error: error.message,
     });
   }
 };
 
-module.exports = { getAllData, createData, getDataByType }
+module.exports = { getAllData, createData, getDataWithCondition }
 

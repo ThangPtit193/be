@@ -32,9 +32,6 @@ const createDataService = () => {
 };
 
 
-
-
-
 const updateDataService = (body, id) => (new Promise(async (resolve, reject) => {
   try {
     const { action } = body
@@ -61,16 +58,5 @@ const getDataService = () => (new Promise(async (resolve, reject) => {
   }
 }))
 
-const getDeviceByTimeService = () => (new Promise(async (resolve, reject) => {
-  try {
-    const response = await device.find()
-    resolve({
-      err: response ? 0 : 1,
-      data: response ? response : null
-    })
-  } catch (error) {
-    reject(error)
-  }
-}))
 
-module.exports = { updateDataService, createDataService, getDataService, getDeviceByTimeService };
+module.exports = { updateDataService, createDataService, getDataService };

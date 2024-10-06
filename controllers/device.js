@@ -1,6 +1,4 @@
-const dataSensor = require('../models/dataSensor')
-const historyAction = require('../models/historyAction')
-const { updateDataService, createDataService, getDataService, getDeviceByTimeService } = require('../services/device')
+const { updateDataService, createDataService, getDataService } = require('../services/device')
 
 
 // const createData = async(req, res) => {
@@ -46,34 +44,9 @@ const getData = async (req, res) => {
   }
 }
 
-const getDeviceByTime = async (req, res) => {
-  try {
-    const { startTime, endTime, page, pageSize } = req.query;
-
-    let condition = {}
-    if (startTime && endTime) {
-      const startDate = new Date(startTime);
-      const endDate = new Date(endTime);
-      condition.createdAt = { $gte: startDate, $lte: endDate }
-    }
-
-    const limit = parseInt(pageSize) || 10; // Số bản ghi trên mỗi trang
-    const skip = (parseInt(page) - 1) * limit || 0; // Số bản ghi bỏ qua
-
-    // Truy vấn dữ liệu với createdAt nằm trong khoảng startDate và endDate
-    const histories = await historyAction.find(condition).skip(skip).limit(limit);
-
-    return res.status(200).json({ data: histories })
-  } catch (error) {
-    return res.status(400).json({
-      err: 1,
-      mess: error
-    })
-  }
-}
 
 
-module.exports = { updateData, getData, getDeviceByTime }
+module.exports = { updateData, getData }
 
 
 
