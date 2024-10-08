@@ -46,7 +46,6 @@ const createDataService = (body) => (new Promise(async (resolve, reject) => {
 const getDataByCondition = async ({ content, searchBy, orderBy, sortBy, page, pageSize }) => {
   try {
     let query = {};
-
     // Nếu có content và searchBy, tạo điều kiện tìm kiếm theo searchBy
     if (content) {
       if (searchBy) {
@@ -62,18 +61,14 @@ const getDataByCondition = async ({ content, searchBy, orderBy, sortBy, page, pa
         };
       }
     }
-
     let sortOptions = {};
     // Nếu có orderBy và sortBy, thêm điều kiện sắp xếp
     if (orderBy && sortBy) {
       sortOptions[orderBy] = sortBy.toLowerCase() === 'asc' ? 1 : -1; // Sắp xếp tăng hoặc giảm dần
     }
-
     const limit = parseInt(pageSize) || 10; // Số bản ghi trên mỗi trang
     const skip = (parseInt(page) - 1) * limit || 0; // Số bản ghi bỏ qua
-
     let dataSensors;
-
     // Kiểm tra nếu không có trang và kích thước trang
     if (!page && !pageSize) {
       dataSensors = await dataSensor.find(query); // Không có phân trang
