@@ -32,32 +32,31 @@ const createDataService = () => {
 };
 
 
-
-
-
-const updateDataService = (body,id) => (new Promise(async(resolve,reject)=> {
+const updateDataService = (body, id) => (new Promise(async (resolve, reject) => {
   try {
-      const {action} = body
-      const response = await device.findByIdAndUpdate({_id : id},{action},{new: true}  
+    const { action } = body
+    const response = await device.findByIdAndUpdate({ _id: id }, { action }, { new: true }
     )
-      resolve({
-          err: response ? 0 : 1,
-          data: response ? response : null
-      })
+    resolve({
+      err: response ? 0 : 1,
+      data: response ? response : null
+    })
   } catch (error) {
-      reject(error)
+    reject(error)
   }
 }))
 
-const getDataService = () => (new Promise(async(resolve,reject)=> {
+const getDataService = () => (new Promise(async (resolve, reject) => {
   try {
-      const response = await device.find() 
-      resolve({
-          err: response ? 0 : 1,
-          data: response ? response : null
-      })
+    const response = await device.find()
+    resolve({
+      err: response ? 0 : 1,
+      data: response ? response : null
+    })
   } catch (error) {
-      reject(error)
+    reject(error)
   }
 }))
-module.exports = {updateDataService,createDataService,getDataService};
+
+
+module.exports = { updateDataService, createDataService, getDataService };
