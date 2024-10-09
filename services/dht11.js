@@ -65,6 +65,9 @@ const getDataByCondition = async ({ content, searchBy, orderBy, sortBy, page, pa
     // Nếu có orderBy và sortBy, thêm điều kiện sắp xếp
     if (orderBy && sortBy) {
       sortOptions[orderBy] = sortBy.toLowerCase() === 'asc' ? 1 : -1; // Sắp xếp tăng hoặc giảm dần
+    } else {
+      // Mặc định sắp xếp theo thời gian tạo (createdAt) giảm dần để lấy dữ liệu mới nhất trước
+      sortOptions['createdAt'] = -1;
     }
     const limit = parseInt(pageSize) || 10; // Số bản ghi trên mỗi trang
     const skip = (parseInt(page) - 1) * limit || 0; // Số bản ghi bỏ qua

@@ -28,9 +28,9 @@ const getDeviceByTime = async (startTime, endTime, page, pageSize) => {
 
     let histories = [];
 
-    // Lấy tất cả dữ liệu nếu không có phân trang
+    // Nếu không có phân trang, trả về tất cả dữ liệu và sắp xếp theo thời gian giảm dần
     if (page === '' && pageSize === '') {
-      histories = await History.find(condition);
+      histories = await History.find(condition).sort({ createdAt: -1 }); // Sắp xếp giảm dần
       return { success: true, data: histories }; // Trả về dữ liệu
     }
 
@@ -38,8 +38,8 @@ const getDeviceByTime = async (startTime, endTime, page, pageSize) => {
     const limit = parseInt(pageSize) || 10; // Số bản ghi trên mỗi trang
     const skip = (parseInt(page) - 1) * limit || 0; // Số bản ghi bỏ qua
 
-    // Truy vấn dữ liệu với createdAt nằm trong khoảng thời gian
-    histories = await History.find(condition).skip(skip).limit(limit);
+    // Truy vấn dữ liệu với createdAt nằm trong khoảng thời gian và sắp xếp giảm dần
+    histories = await History.find(condition).sort({ createdAt: -1 }).skip(skip).limit(limit);
 
     return { success: true, data: histories };
   } catch (error) {
@@ -47,6 +47,7 @@ const getDeviceByTime = async (startTime, endTime, page, pageSize) => {
     return { success: false, message: 'Failed to get device by time: ' + error.message };
   }
 };
+
 module.exports = {
   saveHistory,
   getDeviceByTime
