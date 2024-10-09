@@ -1,4 +1,4 @@
-const { getData, createDataService, getDataByCondition } = require('../services/dht11')
+const { createDataService, getDataByCondition } = require('../services/dht11')
 
 const getAllData = async (req, res) => {
   try {
