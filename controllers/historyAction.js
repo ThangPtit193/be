@@ -16,10 +16,10 @@ const saveHistoryController = async (req, res) => {
 const getDeviceHistoryByTime = async (req, res) => {
   try {
     // Lấy các tham số từ req.query
-    const { startTime, endTime, page, pageSize } = req.query;
+    const { startTime, page, pageSize } = req.query;
 
     // Gọi service để lấy dữ liệu
-    const histories = await getDeviceByTime(startTime, endTime, page, pageSize);
+    const histories = await getDeviceByTime(startTime, page, pageSize);
 
     if (histories.success) {
       return res.status(200).json({

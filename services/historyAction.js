@@ -15,7 +15,7 @@ const saveHistory = async (deviceId, deviceName, action) => {
   }
 };
 
-const getDeviceByTime = async (startTime, endTime, page, pageSize) => {
+const getDeviceByTime = async (startTime, page, pageSize) => {
   try {
     let condition = {};
 
