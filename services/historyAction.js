@@ -15,16 +15,73 @@ const saveHistory = async (deviceId, deviceName, action) => {
   }
 };
 
-const getDeviceByTime = async (startTime, endTime, page, pageSize) => {
+const getDeviceByTime = async (startTime, page, pageSize) => {
   try {
     let condition = {};
 
     // Tạo điều kiện truy vấn dựa vào startTime và endTime
-    if (startTime && endTime) {
-      const startDate = new Date(startTime);
-      const endDate = new Date(endTime);
-      condition.createdAt = { $gte: startDate, $lte: endDate };
+    if (startTime) {
+      if (startTime.includes('/') && startTime.split('/').length === 2) {
+        // Xử lý trường hợp chỉ có ngày và tháng (ví dụ: "09/10")
+        const [day, month] = startTime.split('/');
+        const currentYear = new Date().getFullYear();
+        const startDate = new Date(`${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00+07:00`);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 1);
+
+        condition = {
+          createdAt: {
+            $gte: startDate,
+            $lt: endDate
+          }
+        };
+      } else if (startTime.includes('/') && !startTime.includes(':')) {
+        // Xử lý trường hợp chỉ có ngày tháng năm (ví dụ: "09/10/2024")
+        const [day, month, year] = startTime.split('/');
+        const startDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00+07:00`);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 1);
+
+        condition = {
+          createdAt: {
+            $gte: startDate,
+            $lt: endDate
+          }
+        };
+      } else if (startTime.includes('/') && startTime.includes(':')) {
+        // Xử lý trường hợp ngày giờ đầy đủ (ví dụ: "09/10/2024 14:34:59")
+        const [datePart, timePart] = startTime.split(' ');
+        const [day, month, year] = datePart.split('/');
+        const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${timePart}+07:00`;
+        const searchDate = new Date(isoDate);
+
+        condition = {
+          createdAt: {
+            $gte: searchDate,
+            $lt: new Date(searchDate.getTime() + 1000) // Thêm 1 giây
+          }
+        };
+      } else {
+        // Xử lý trường hợp chỉ có giờ (ví dụ: "14:34")
+        condition = {
+          $expr: {
+            $regexMatch: {
+              input: { 
+                $dateToString: { 
+                  format: "%H:%M", 
+                  date: "$createdAt",
+                  timezone: "+07:00"
+                } 
+              },
+              regex: startTime
+            }
+          }
+        };
+      }
     }
+
+    console.log("Điều kiện tìm kiếm:", condition);
+
 
     let histories = [];
 

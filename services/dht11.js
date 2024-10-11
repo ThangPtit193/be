@@ -46,46 +46,97 @@ const createDataService = (body) => (new Promise(async (resolve, reject) => {
 const getDataByCondition = async ({ content, searchBy, orderBy, sortBy, page, pageSize }) => {
   try {
     let query = {};
-    // Nếu có content và searchBy, tạo điều kiện tìm kiếm theo searchBy
+    
     if (content) {
-      if (searchBy) {
-        query[searchBy] = isNaN(Number(content)) ? content : Number(content); // Chuyển đổi sang số nếu có thể
+      if (searchBy === 'createdAt') {
+        // Xử lý tìm kiếm theo thời gian
+        if (content.includes('/') && content.split('/').length === 2) {
+          // Trường hợp chỉ có ngày và tháng (ví dụ: "09/10")
+          const [day, month] = content.split('/');
+          const currentYear = new Date().getFullYear();
+          const startDate = new Date(`${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00+07:00`);
+          const endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + 1);
+
+          query.createdAt = {
+            $gte: startDate,
+            $lt: endDate
+          };
+        } else if (content.includes('/') && !content.includes(':')) {
+          // Trường hợp chỉ có ngày tháng năm (ví dụ: "09/10/2024")
+          const [day, month, year] = content.split('/');
+          const startDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00+07:00`);
+          const endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + 1);
+
+          query.createdAt = {
+            $gte: startDate,
+            $lt: endDate
+          };
+        } else if (content.includes('/') && content.includes(':')) {
+          // Trường hợp ngày giờ đầy đủ (ví dụ: "09/10/2024 14:34:59")
+          const [datePart, timePart] = content.split(' ');
+          const [day, month, year] = datePart.split('/');
+          const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${timePart}+07:00`;
+          const searchDate = new Date(isoDate);
+
+          query.createdAt = {
+            $gte: searchDate,
+            $lt: new Date(searchDate.getTime() + 1000) // Thêm 1 giây
+          };
+        } else if (content.includes(':')) {
+          // Trường hợp chỉ có giờ (ví dụ: "14:34")
+          query = {
+            $expr: {
+              $regexMatch: {
+                input: { 
+                  $dateToString: { 
+                    format: "%H:%M", 
+                    date: "$createdAt",
+                    timezone: "+07:00"
+                  } 
+                },
+                regex: content
+              }
+            }
+          };
+        }
+      } else if (searchBy) {
+        query[searchBy] = isNaN(Number(content)) ? content : Number(content);
       } else {
-        // Nếu không có searchBy, tìm kiếm content trong các trường cụ thể
         query = {
           $or: [
-            { temperature: isNaN(Number(content)) ? undefined : Number(content) }, // Nếu content là số, tìm kiếm trong nhiệt độ
-            { humidity: isNaN(Number(content)) ? undefined : Number(content) },    // Tương tự cho độ ẩm
-            { light: isNaN(Number(content)) ? undefined : Number(content) }        // Tương tự cho ánh sáng
-          ].filter(cond => Object.values(cond)[0] !== undefined) // Loại bỏ các điều kiện không hợp lệ
+            { temperature: isNaN(Number(content)) ? undefined : Number(content) },
+            { humidity: isNaN(Number(content)) ? undefined : Number(content) },
+            { light: isNaN(Number(content)) ? undefined : Number(content) }
+          ].filter(cond => Object.values(cond)[0] !== undefined)
         };
       }
     }
+
     let sortOptions = {};
-    // Nếu có orderBy và sortBy, thêm điều kiện sắp xếp
     if (orderBy && sortBy) {
-      sortOptions[orderBy] = sortBy.toLowerCase() === 'asc' ? 1 : -1; // Sắp xếp tăng hoặc giảm dần
+      sortOptions[orderBy] = sortBy.toLowerCase() === 'asc' ? 1 : -1;
     } else {
-      // Mặc định sắp xếp theo thời gian tạo (createdAt) giảm dần để lấy dữ liệu mới nhất trước
       sortOptions['createdAt'] = -1;
     }
-    const limit = parseInt(pageSize) || 10; // Số bản ghi trên mỗi trang
-    const skip = (parseInt(page) - 1) * limit || 0; // Số bản ghi bỏ qua
+
+    const limit = parseInt(pageSize) || 10;
+    const skip = (parseInt(page) - 1) * limit || 0;
+
     let dataSensors;
-    // Kiểm tra nếu không có trang và kích thước trang
     if (!page && !pageSize) {
-      dataSensors = await dataSensor.find(query); // Không có phân trang
+      dataSensors = await dataSensor.find(query).sort(sortOptions);
     } else {
-      // Thực hiện query với điều kiện phân trang
       dataSensors = await dataSensor.find(query)
-        .sort(sortOptions) // Sắp xếp
-        .skip(skip) // Bỏ qua số bản ghi
-        .limit(limit); // Giới hạn số bản ghi
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit);
     }
 
-    return { success: true, data: dataSensors }; // Trả về dữ liệu
+    return { success: true, data: dataSensors };
   } catch (error) {
-    throw new Error(error.message); // Ném ra lỗi để controller xử lý
+    throw new Error(error.message);
   }
 };
 
