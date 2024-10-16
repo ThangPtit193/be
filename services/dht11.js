@@ -91,7 +91,7 @@ const getDataByCondition = async ({ content, searchBy, orderBy, sortBy, page, pa
   
   try {
     // Lấy tất cả các bản ghi, bao gồm cả createdAt, id, và name
-    const dataSensors = await dataSensor.find({}, { createdAt: 1, _id: 1, temperature: 1, humidity: 1, light: 1 }).sort({ createdAt: -1 });
+    const dataSensors = await dataSensor.find({}, { createdAt: 1, _id: 1, temperature: 1, humidity: 1, light: 1, fog }).sort({ createdAt: -1 });
 
     if (dataSensors.length === 0) {
       console.log('No data found');
@@ -106,7 +106,7 @@ const getDataByCondition = async ({ content, searchBy, orderBy, sortBy, page, pa
           const isoDateString = item.createdAt.toISOString();
           return isoDateString.includes(convertInput(content)); // Sử dụng includes để tìm kiếm content trong chuỗi ISO
         });
-      } else if (searchBy === 'temperature' || searchBy === 'humidity' || searchBy === 'light') {
+      } else if (searchBy === 'temperature' || searchBy === 'humidity' || searchBy === 'light'|| searchBy ==='fog') {
         filteredDatas = dataSensors.filter(item => {
           return item[searchBy] === (isNaN(Number(content)) ? content : Number(content));
         });
@@ -121,6 +121,7 @@ const getDataByCondition = async ({ content, searchBy, orderBy, sortBy, page, pa
           return (
             item.temperature === (isNaN(Number(content)) ? content : Number(content)) ||
             item.humidity === (isNaN(Number(content)) ? content : Number(content)) ||
+            item.fog === (isNaN(Number(content)) ? content : Number(content)) ||
             item.light === (isNaN(Number(content)) ? content : Number(content))
           );
         });

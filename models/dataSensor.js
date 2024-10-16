@@ -10,6 +10,7 @@ const Data = new Schema({
     temperature: {type: Number},
     humidity: {type: Number},
     light: {type: Number},
+    fog: {type: Number}
 },{
     timestamps: true,
 });
