@@ -75,7 +75,7 @@ const getDeviceByTime = async (startTime, page, pageSize) => {
   
   try {
     // Lấy tất cả các bản ghi, bao gồm cả createdAt, id, và name
-    const histories = await History.find({}, { createdAt: 1, deviceId: 1, deviceName: 1 }).sort({ createdAt: -1 });
+    const histories = await History.find({}, { createdAt: 1, deviceId: 1, deviceName: 1, action: 1 }).sort({ createdAt: -1 });
 
     if (histories.length === 0) {
       console.log('No data found');
