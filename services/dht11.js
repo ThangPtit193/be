@@ -30,9 +30,9 @@ const dataSensor = require('../models/dataSensor')
 
 const createDataService = (body) => (new Promise(async (resolve, reject) => {
   try {
-    const { light, temperature, humidity } = body
+    const { light, temperature, humidity, fog } = body
     const response = await dataSensor.create({
-      light: light, temperature: temperature, humidity: humidity
+      light: light, temperature: temperature, humidity: humidity, fog: fog
     })
     resolve({
       err: response ? 0 : 1,
@@ -46,24 +46,24 @@ const createDataService = (body) => (new Promise(async (resolve, reject) => {
 const getDataByCondition = async ({ content, searchBy, orderBy, sortBy, page, pageSize }) => {
   const convertInput = (input) => {
     if (input.includes('/')) {
-      const parts = input.split(' '); 
-      const datePart = parts[0];      
-      const timePart = parts[1];     
-      const dateParts = datePart.split('/'); 
+      const parts = input.split(' ');
+      const datePart = parts[0];
+      const timePart = parts[1];
+      const dateParts = datePart.split('/');
 
       if (dateParts.length === 3 && timePart) {
         const [day, month, year] = dateParts;
         const formattedTime = convertInput(timePart);
-        return `${year}-${month}-${day}T${formattedTime}`; 
+        return `${year}-${month}-${day}T${formattedTime}`;
       } else if (dateParts.length === 3) {
         const [day, month, year] = dateParts;
-        return `${year}-${month}-${day}`;  
+        return `${year}-${month}-${day}`;
       } else if (dateParts.length === 2) {
         const [day, month] = dateParts;
         return `${month}-${day}`;
       }
     }
-    
+
     if (input.includes(':')) {
       if (input.split(':').length === 3) {
         let [hours, minutes, seconds] = input.split(':');
@@ -85,13 +85,13 @@ const getDataByCondition = async ({ content, searchBy, orderBy, sortBy, page, pa
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
       }
     }
-    
+
     return null;
   };
-  
+
   try {
     // Lấy tất cả các bản ghi, bao gồm cả createdAt, id, và name
-    const dataSensors = await dataSensor.find({}, { createdAt: 1, _id: 1, temperature: 1, humidity: 1, light: 1, fog }).sort({ createdAt: -1 });
+    const dataSensors = await dataSensor.find({}, { createdAt: 1, _id: 1, temperature: 1, humidity: 1, light: 1, fog: 1 }).sort({ createdAt: -1 });
 
     if (dataSensors.length === 0) {
       console.log('No data found');
@@ -106,7 +106,7 @@ const getDataByCondition = async ({ content, searchBy, orderBy, sortBy, page, pa
           const isoDateString = item.createdAt.toISOString();
           return isoDateString.includes(convertInput(content)); // Sử dụng includes để tìm kiếm content trong chuỗi ISO
         });
-      } else if (searchBy === 'temperature' || searchBy === 'humidity' || searchBy === 'light'|| searchBy ==='fog') {
+      } else if (searchBy === 'temperature' || searchBy === 'humidity' || searchBy === 'light' || searchBy === 'fog') {
         filteredDatas = dataSensors.filter(item => {
           return item[searchBy] === (isNaN(Number(content)) ? content : Number(content));
         });
@@ -140,9 +140,9 @@ const getDataByCondition = async ({ content, searchBy, orderBy, sortBy, page, pa
 
     if (page === '' && pageSize === '') {
       // Trả về dữ liệu đã lọc
-      return { success: true, data: filteredDatas }; 
+      return { success: true, data: filteredDatas };
     }
-    
+
     filteredDatas.forEach(item => {
       console.log(`createdAt: ${item.createdAt.toISOString()}, id: ${item._id}, temperature: ${item.temperature}, humidity: ${item.humidity}, light: ${item.light}`);
     });
@@ -164,4 +164,4 @@ const getDataByCondition = async ({ content, searchBy, orderBy, sortBy, page, pa
 
 
 
-module.exports = {createDataService, getDataByCondition };
+module.exports = { createDataService, getDataByCondition };

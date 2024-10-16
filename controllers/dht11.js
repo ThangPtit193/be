@@ -16,7 +16,7 @@ const getAllData = async (req, res) => {
 
 const createData = async (req, res) => {
   try {
-    const { light, temperature, humidity } = req.body
+    const { light, temperature, humidity, fog } = req.body
     // if(!light || !temperature || !humidity) return res.status(500).json({
     //   err: 1,
     //   mess:"missing input"
