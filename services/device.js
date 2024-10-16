@@ -12,6 +12,7 @@ const createDataService = () => {
         { name: 'Fan' },
         { name: 'TV' },
         { name: 'Bulb' },
+        { name: 'Alert'}
       ];
 
       const responses = await Promise.all(
