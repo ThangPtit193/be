@@ -30,9 +30,9 @@ const dataSensor = require('../models/dataSensor')
 
 const createDataService = (body) => (new Promise(async (resolve, reject) => {
   try {
-    const { light, temperature, humidity } = body
+    const { light, temperature, humidity, fog } = body
     const response = await dataSensor.create({
-      light: light, temperature: temperature, humidity: humidity
+      light: light, temperature: temperature, humidity: humidity, fog: fog
     })
     resolve({
       err: response ? 0 : 1,
@@ -44,99 +44,118 @@ const createDataService = (body) => (new Promise(async (resolve, reject) => {
 }))
 
 const getDataByCondition = async ({ content, searchBy, orderBy, sortBy, page, pageSize }) => {
-  try {
-    let query = {};
-    
-    if (content) {
-      if (searchBy === 'createdAt') {
-        // Xử lý tìm kiếm theo thời gian
-        if (content.includes('/') && content.split('/').length === 2) {
-          // Trường hợp chỉ có ngày và tháng (ví dụ: "09/10")
-          const [day, month] = content.split('/');
-          const currentYear = new Date().getFullYear();
-          const startDate = new Date(`${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00+07:00`);
-          const endDate = new Date(startDate);
-          endDate.setDate(endDate.getDate() + 1);
+  const convertInput = (input) => {
+    if (input.includes('/')) {
+      const parts = input.split(' ');
+      const datePart = parts[0];
+      const timePart = parts[1];
+      const dateParts = datePart.split('/');
 
-          query.createdAt = {
-            $gte: startDate,
-            $lt: endDate
-          };
-        } else if (content.includes('/') && !content.includes(':')) {
-          // Trường hợp chỉ có ngày tháng năm (ví dụ: "09/10/2024")
-          const [day, month, year] = content.split('/');
-          const startDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00+07:00`);
-          const endDate = new Date(startDate);
-          endDate.setDate(endDate.getDate() + 1);
-
-          query.createdAt = {
-            $gte: startDate,
-            $lt: endDate
-          };
-        } else if (content.includes('/') && content.includes(':')) {
-          // Trường hợp ngày giờ đầy đủ (ví dụ: "09/10/2024 14:34:59")
-          const [datePart, timePart] = content.split(' ');
-          const [day, month, year] = datePart.split('/');
-          const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${timePart}+07:00`;
-          const searchDate = new Date(isoDate);
-
-          query.createdAt = {
-            $gte: searchDate,
-            $lt: new Date(searchDate.getTime() + 1000) // Thêm 1 giây
-          };
-        } else if (content.includes(':')) {
-          // Trường hợp chỉ có giờ (ví dụ: "14:34")
-          query = {
-            $expr: {
-              $regexMatch: {
-                input: { 
-                  $dateToString: { 
-                    format: "%H:%M", 
-                    date: "$createdAt",
-                    timezone: "+07:00"
-                  } 
-                },
-                regex: content
-              }
-            }
-          };
-        }
-      } else if (searchBy) {
-        query[searchBy] = isNaN(Number(content)) ? content : Number(content);
-      } else {
-        query = {
-          $or: [
-            { temperature: isNaN(Number(content)) ? undefined : Number(content) },
-            { humidity: isNaN(Number(content)) ? undefined : Number(content) },
-            { light: isNaN(Number(content)) ? undefined : Number(content) }
-          ].filter(cond => Object.values(cond)[0] !== undefined)
-        };
+      if (dateParts.length === 3 && timePart) {
+        const [day, month, year] = dateParts;
+        const formattedTime = convertInput(timePart);
+        return `${year}-${month}-${day}T${formattedTime}`;
+      } else if (dateParts.length === 3) {
+        const [day, month, year] = dateParts;
+        return `${year}-${month}-${day}`;
+      } else if (dateParts.length === 2) {
+        const [day, month] = dateParts;
+        return `${month}-${day}`;
       }
     }
 
-    let sortOptions = {};
+    if (input.includes(':')) {
+      if (input.split(':').length === 3) {
+        let [hours, minutes, seconds] = input.split(':');
+        hours = parseInt(hours);
+        if (hours >= 7) {
+          hours -= 7;
+        } else {
+          hours += 17;
+        }
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      } else if (input.split(':').length === 2) {
+        let [hours, minutes] = input.split(':');
+        hours = parseInt(hours);
+        if (hours >= 7) {
+          hours -= 7;
+        } else {
+          hours += 17;
+        }
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      }
+    }
+
+    return null;
+  };
+
+  try {
+    // Lấy tất cả các bản ghi, bao gồm cả createdAt, id, và name
+    const dataSensors = await dataSensor.find({}, { createdAt: 1, _id: 1, temperature: 1, humidity: 1, light: 1, fog: 1 }).sort({ createdAt: -1 });
+
+    if (dataSensors.length === 0) {
+      console.log('No data found');
+      return { success: false, message: 'No data found' };
+    }
+
+    // Kiểm tra nếu content tồn tại, thì lọc dữ liệu theo content
+    let filteredDatas = dataSensors;
+    if (content) {
+      if (searchBy === 'createdAt') {
+        filteredDatas = dataSensors.filter(item => {
+          const isoDateString = item.createdAt.toISOString();
+          return isoDateString.includes(convertInput(content)); // Sử dụng includes để tìm kiếm content trong chuỗi ISO
+        });
+      } else if (searchBy === 'temperature' || searchBy === 'humidity' || searchBy === 'light' || searchBy === 'fog') {
+        filteredDatas = dataSensors.filter(item => {
+          return item[searchBy] === (isNaN(Number(content)) ? content : Number(content));
+        });
+      } else if (searchBy) {
+        // Handle other fields (temperature, humidity, light)
+        filteredDatas = dataSensors.filter(item => {
+          return item[searchBy] === (isNaN(Number(content)) ? content : Number(content));
+        });
+      } else {
+        // General filter logic (using light, temperature, or humidity)
+        filteredDatas = dataSensors.filter(item => {
+          return (
+            item.temperature === (isNaN(Number(content)) ? content : Number(content)) ||
+            item.humidity === (isNaN(Number(content)) ? content : Number(content)) ||
+            item.fog === (isNaN(Number(content)) ? content : Number(content)) ||
+            item.light === (isNaN(Number(content)) ? content : Number(content))
+          );
+        });
+      }
+    }
+
+    // Sắp xếp dữ liệu nếu có orderBy và sortBy
     if (orderBy && sortBy) {
-      sortOptions[orderBy] = sortBy.toLowerCase() === 'asc' ? 1 : -1;
-    } else {
-      sortOptions['createdAt'] = -1;
+      const order = sortBy.toLowerCase() === 'asc' ? 1 : -1;
+      filteredDatas.sort((a, b) => {
+        if (a[orderBy] < b[orderBy]) return -order;
+        if (a[orderBy] > b[orderBy]) return order;
+        return 0;
+      });
     }
 
-    const limit = parseInt(pageSize) || 10;
-    const skip = (parseInt(page) - 1) * limit || 0;
-
-    let dataSensors;
-    if (!page && !pageSize) {
-      dataSensors = await dataSensor.find(query).sort(sortOptions);
-    } else {
-      dataSensors = await dataSensor.find(query)
-        .sort(sortOptions)
-        .skip(skip)
-        .limit(limit);
+    if (page === '' && pageSize === '') {
+      // Trả về dữ liệu đã lọc
+      return { success: true, data: filteredDatas };
     }
 
-    return { success: true, data: dataSensors };
+    filteredDatas.forEach(item => {
+      console.log(`createdAt: ${item.createdAt.toISOString()}, id: ${item._id}, temperature: ${item.temperature}, humidity: ${item.humidity}, light: ${item.light}`);
+    });
+
+    // Xử lý phân trang
+    const limit = parseInt(pageSize) || 10; // Số bản ghi trên mỗi trang
+    const skip = (parseInt(page) - 1) * limit || 0; // Số bản ghi bỏ qua
+
+    const paginatedData = filteredDatas.slice(skip, skip + limit);
+    return { success: true, data: paginatedData };
   } catch (error) {
-    throw new Error(error.message);
+    console.log('Failed to get device by time:', error.message);
+    return { success: false, message: 'Failed to get device by time: ' + error.message };
   }
 };
 
@@ -145,4 +164,4 @@ const getDataByCondition = async ({ content, searchBy, orderBy, sortBy, page, pa
 
 
 
-module.exports = {createDataService, getDataByCondition };
+module.exports = { createDataService, getDataByCondition };

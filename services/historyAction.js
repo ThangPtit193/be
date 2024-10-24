@@ -16,91 +16,101 @@ const saveHistory = async (deviceId, deviceName, action) => {
 };
 
 const getDeviceByTime = async (startTime, page, pageSize) => {
-  try {
-    let condition = {};
+  const convertInput = (input) => {
 
-    // Tạo điều kiện truy vấn dựa vào startTime và endTime
-    if (startTime) {
-      if (startTime.includes('/') && startTime.split('/').length === 2) {
-        // Xử lý trường hợp chỉ có ngày và tháng (ví dụ: "09/10")
-        const [day, month] = startTime.split('/');
-        const currentYear = new Date().getFullYear();
-        const startDate = new Date(`${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00+07:00`);
-        const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + 1);
+    if (input.includes('/')) {
+      const parts = input.split(' '); 
+      const datePart = parts[0];      
+      const timePart = parts[1];     
+      const dateParts = datePart.split('/'); 
 
-        condition = {
-          createdAt: {
-            $gte: startDate,
-            $lt: endDate
-          }
-        };
-      } else if (startTime.includes('/') && !startTime.includes(':')) {
-        // Xử lý trường hợp chỉ có ngày tháng năm (ví dụ: "09/10/2024")
-        const [day, month, year] = startTime.split('/');
-        const startDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00+07:00`);
-        const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + 1);
-
-        condition = {
-          createdAt: {
-            $gte: startDate,
-            $lt: endDate
-          }
-        };
-      } else if (startTime.includes('/') && startTime.includes(':')) {
-        // Xử lý trường hợp ngày giờ đầy đủ (ví dụ: "09/10/2024 14:34:59")
-        const [datePart, timePart] = startTime.split(' ');
-        const [day, month, year] = datePart.split('/');
-        const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${timePart}+07:00`;
-        const searchDate = new Date(isoDate);
-
-        condition = {
-          createdAt: {
-            $gte: searchDate,
-            $lt: new Date(searchDate.getTime() + 1000) // Thêm 1 giây
-          }
-        };
-      } else {
-        // Xử lý trường hợp chỉ có giờ (ví dụ: "14:34")
-        condition = {
-          $expr: {
-            $regexMatch: {
-              input: { 
-                $dateToString: { 
-                  format: "%H:%M", 
-                  date: "$createdAt",
-                  timezone: "+07:00"
-                } 
-              },
-              regex: startTime
-            }
-          }
-        };
+      if (dateParts.length === 3 && timePart) {
+        
+        const [day, month, year] = dateParts;
+        const formattedTime = convertInput(timePart);
+        
+        return `${year}-${month}-${day}T${formattedTime}`; 
+      } else if (dateParts.length === 3) {
+       
+        const [day, month, year] = dateParts;
+        return `${year}-${month}-${day}`;  
+      } else if (dateParts.length === 2) {
+       
+        const [day, month] = dateParts;
+        return `${month}-${day}`;
       }
     }
+    
+    if (input.includes(':')) {
+      
+      if (input.split(':').length === 3) {
+        let [hours, minutes, seconds] = input.split(':');
+        hours = parseInt(hours);
+  
+       
+        if (hours >= 7) {
+          hours -= 7;
+        } else {
+          hours += 17;
+        }
+  
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      }
+      else if (input.split(':').length === 2) {
+        let [hours, minutes] = input.split(':');
+        hours = parseInt(hours);
+  
+        if (hours >= 7) {
+          hours -= 7;
+        } else {
+          hours += 17;
+        }
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      }
+    }
+  
+    
+    return null;
+  };
+  
+  try {
+    // Lấy tất cả các bản ghi, bao gồm cả createdAt, id, và name
+    const histories = await History.find({}, { createdAt: 1, deviceId: 1, deviceName: 1, action: 1 }).sort({ createdAt: -1 });
 
-    console.log("Điều kiện tìm kiếm:", condition);
-
-
-    let histories = [];
-
-    // Nếu không có phân trang, trả về tất cả dữ liệu và sắp xếp theo thời gian giảm dần
-    if (page === '' && pageSize === '') {
-      histories = await History.find(condition).sort({ createdAt: -1 }); // Sắp xếp giảm dần
-      return { success: true, data: histories }; // Trả về dữ liệu
+    if (histories.length === 0) {
+      console.log('No data found');
+      return { success: false, message: 'No data found' };
     }
 
-    // Giới hạn số lượng bản ghi trả về và bỏ qua một số bản ghi dựa vào phân trang
+    // Kiểm tra nếu startTime tồn tại, thì lọc dữ liệu theo startTime
+    let filteredHistories = histories;
+    if (startTime) {
+      filteredHistories = histories.filter(item => {
+        const isoDateString = item.createdAt.toISOString();
+        return isoDateString.includes(convertInput(startTime)); // Sử dụng includes để tìm kiếm startTime trong chuỗi ISO
+      });
+    }
+    if(!startTime){
+      return { success: true, data: filteredHistories };
+    }
+
+    if (page === '' && pageSize === '') {
+           // Sắp xếp giảm dần
+          return { success: true, data: filteredHistories }; // Trả về dữ liệu
+        }
+    
+    filteredHistories.forEach(item => {
+      console.log(`createdAt: ${item.createdAt.toISOString()}, id: ${item.deviceId}, name: ${item.deviceName}`);
+    });
+
+    // Xử lý phân trang
     const limit = parseInt(pageSize) || 10; // Số bản ghi trên mỗi trang
     const skip = (parseInt(page) - 1) * limit || 0; // Số bản ghi bỏ qua
 
-    // Truy vấn dữ liệu với createdAt nằm trong khoảng thời gian và sắp xếp giảm dần
-    histories = await History.find(condition).sort({ createdAt: -1 }).skip(skip).limit(limit);
-
-    return { success: true, data: histories };
+    const paginatedData = filteredHistories.slice(skip, skip + limit);
+    return { success: true, data: paginatedData };
   } catch (error) {
-    // Bắt lỗi và trả về object có định dạng rõ ràng
+    console.log('Failed to get device by time:', error.message);
     return { success: false, message: 'Failed to get device by time: ' + error.message };
   }
 };
