@@ -90,6 +90,9 @@ const getDeviceByTime = async (startTime, page, pageSize) => {
         return isoDateString.includes(convertInput(startTime)); // Sử dụng includes để tìm kiếm startTime trong chuỗi ISO
       });
     }
+    if(!startTime){
+      return { success: true, data: filteredHistories };
+    }
 
     if (page === '' && pageSize === '') {
            // Sắp xếp giảm dần
